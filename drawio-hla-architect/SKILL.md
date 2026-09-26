@@ -6,12 +6,12 @@ description: >-
   infrastructure icons (PostgreSQL, MySQL, MongoDB, Redis, Kafka, Kong, Apigee, Vault),
   mandatory multi-swimlane separation (Kong Gateway, BFF, Orch, Core, and Adaptor each in their
   own dedicated swimlane), 2-page structure (with 'Standard Colors and Icons' tab in every diagram),
-  zero-orphan connectivity checks, wire-crossing minimization, and connection styles (sync/async).
+  zero-orphan connectivity checks, wire-crossing minimization with a slot-based layout engine (corridor routing, gutter hops, dip bands), a short edge-label law, and a mechanical layout verification gate (zero-orphan, zero-overlap, zero-stacking) before publication.
 ---
 
 # Draw.io HLA Architecture & Standards Guide
 
-This skill provides comprehensive standards, XML templates, and visual conventions for authoring enterprise **High-Level Architecture (HLA)** diagrams in `draw.io` XML format (`.drawio.xml`), specifically optimized for the **KTB / Infinitas / Arise** digital banking ecosystem.
+This skill provides comprehensive standards, XML templates, and visual conventions for authoring enterprise **High-Level Architecture (HLA)** diagrams in `draw.io` XML format (`.drawio.xml`), specifically optimized for the **KTB / Infinitas / Arise** digital banking ecosystem. Layout quality is mechanical, not eyeball: build with the declarative engine (`resources/hla_generator.py`) and gate with `resources/verify_layout.py` (§5–§6).
 
 ---
 
@@ -21,7 +21,7 @@ This skill provides comprehensive standards, XML templates, and visual conventio
    Every generated Draw.io XML HLA diagram **MUST include at least two pages/tabs**:
    * **Page 1 (`HLA Overview`):** The end-to-end multi-swimlane architecture diagram.
    * **Page 2 (`Standard Colors and Icons` / `id="ao9VHCrxs2CTfegMv53f"`):** The complete enterprise standard palette tab, containing the Component Lifecycle Matrix (New, Enhanced, Existing, External), Connection Types (Sync, Async, Kafka, Token), Kubernetes Pod shapes, color-coded Database Cylinders, and official Technology & Infrastructure Icons.
-   * *Template Resource:* The standard Page 2 XML is located in `.agents/skills/drawio-hla-architect/resources/standard_icons_tab.xml`.
+   * *Template Resource:* The standard Page 2 XML is located in `resources/standard_icons_tab.xml`, beside this skill (the layout engine resolves it relative to its own file — never hard-code absolute paths).
 
 2. **Dedicated Swimlane for Every Tier (No Merged Layers):**
    Architectural tiers must **NEVER be combined into a single column**. Each layer must reside in its own dedicated vertical swimlane:
@@ -41,10 +41,11 @@ This skill provides comprehensive standards, XML templates, and visual conventio
      2. Inbound Webhook $\rightarrow$ routes through Gateway/BFF to Orchestrator Callback Receiver (`orch-*-callback`) in Swimlane 4.
      3. Callback Receiver $\rightarrow$ calls Domain Core (`core-*`) in Swimlane 5 to update status, store verification scores, or advance the 2PC saga.
 
-4. **Wire-Crossing Minimization Heuristics (Planar Routing Optimization):**
-   To produce clean, enterprise-grade architecture diagrams without visual clutter:
-   * **Horizontal Track Alignment (Equal Y-Band):** Group related microservices along the same horizontal track (Y band) so that request $\rightarrow$ response flows travel straight horizontally.
-   * **Dedicated Top/Bottom Bypass Corridors:** Long-range return flows that travel backward from right to left (e.g. external async webhooks returning from Column 7 to Column 1, or token handoffs to WebViews) **MUST be routed through dedicated top corridors (Y < 120px) or bottom corridors (Y > 800px)** with explicit orthogonal waypoints (`<Array as="points"><mxPoint x="..." y="..."/></Array>`). They must NEVER cut diagonally across middle tiers!
+4. **Wire-Crossing Minimization (Deterministic Routing Law):**
+   Clean layout comes from the slot engine, not from hand-tuned coordinates (§5):
+   * **Equal Y-Band Rows:** a node's slot fixes its Y; forward edges between adjacent lanes run straight on the row.
+   * **Dip Bands:** multi-lane forward spans dip through the inter-row gap band with fewer same-lane hop conflicts, exiting vertically so they never share a ray with a row wire.
+   * **Bypass Corridors:** backward (right-to-left) flows take their own top-corridor row above the lane band; multi-lane `event` edges take the bottom corridor — each with explicit orthogonal waypoints (`<Array as="points"><mxPoint x="..." y="..."/></Array>`), never diagonally across middle tiers, never through lane headers.
    * **Arc Jump Rendering:** Every edge MUST include `jumpStyle=arc;jumpSize=6;` so that whenever lines do cross, Draw.io automatically renders a clean arc bridge.
 
 5. **Standard Database Icons (PostgreSQL, MySQL, MongoDB, Redis):**
@@ -58,6 +59,15 @@ This skill provides comprehensive standards, XML templates, and visual conventio
    * **Kong API Gateway:** Official Kong Gateway logo (`shape=image;html=1;whiteSpace=wrap;image=https://seeklogo.com/images/K/kong-logo-30290787E5-seeklogo.com.png;`).
    * **Apache Kafka Event Bus:** Official Kafka broker icon (`shape=image;html=1;whiteSpace=wrap;image=https://www.svgrepo.com/show/353951/kafka-icon.svg;`).
    * **HashiCorp Vault / Core Bank:** Official Vault icon (`shape=image;html=1;whiteSpace=wrap;image=data:image/png,...`).
+
+7. **Edge Label Discipline (Label Law):**
+   * Every edge label **MUST** be ≤ 24 characters per line, ≤ 2 lines, and carry `labelBackgroundColor` so text stays readable where it crosses a wire.
+   * Full topic names and payload detail **NEVER** go on the canvas: the label is the short verb or trimmed topic; the full name lives in the tooltip or the legend.
+   * Parallel wires sharing a row pin their labels at staggered positions (an `x` offset on the label child cell) so text never stacks at the same midpoint.
+
+8. **Layout Quality Gate (Mechanical, Not Eyeball):**
+   * `python3 resources/verify_layout.py <file>.drawio.xml` **MUST** exit 0 before publication: zero orphans, zero node overlaps, zero label violations, zero stacked wires, zero wire-through-node, crossings within budget.
+   * Fix violations in the declarative model (slots, labels, edge kinds) and regenerate — never by hand-nudging coordinates in the generated XML.
 
 ---
 
@@ -187,7 +197,8 @@ style="shape=image;html=1;verticalLabelPosition=bottom;verticalAlign=top;imageAs
 All end-to-end HLA diagrams must use the standardized 7-swimlane spatial layout. Kong Gateway and all microservice layers (BFF, Orch, Core, Adaptor) MUST each occupy their own separate swimlane.
 
 ```
-Width: ~2800px | Height: ~1080px | Page Margin: X=50px, Y=70px
+Width: ~2200px+ | Height: dynamic (slot count × 90px + bands) | Margin: X=50, lanes top Y=130,
+top corridor band Y<130 (reserved), bottom corridor below lanes (reserved)
 
 ┌────────────┬─────────────┬─────────────┬──────────────┬─────────────┬─────────────┬────────────────────┐
 │ Swimlane 1 │ Swimlane 2  │ Swimlane 3  │  Swimlane 4  │ Swimlane 5  │ Swimlane 6  │     Swimlane 7     │
@@ -209,23 +220,18 @@ Width: ~2800px | Height: ~1080px | Page Margin: X=50px, Y=70px
 └────────────┴─────────────┴─────────────┴──────────────┴─────────────┴─────────────┴────────────────────┘
 ```
 
-### 3.1. Minimal Wire-Crossing Layout Principles (Equal Y-Band Routing)
+### 3.1. Slot Assignment Principles (How to Pick the Y-Slot)
 
-To prevent crossed connections, align components into five horizontal functional tracks:
+The engine fixes every Y from the node's **slot** (§5) — slot assignment is the design decision you make, and it is what keeps wires straight. Assign slots by **functional track**: services that form one end-to-end flow share a row, so the whole chain renders as a single straight horizontal line:
 
-1. **Track 1 (Bureau & Async Callback Track, Y: 140–240px):**
-   * Col 1: `NCB Webhook Callback` $\rightarrow$ Col 2: Kong $\rightarrow$ Col 4: `orch-ncb-callback` $\rightarrow$ Col 5: `core-credit-scoring` $\rightarrow$ Col 6: `adaptor-ncb` $\rightarrow$ Col 7: `NCB Bureau`.
-   * Webhook returns via **Top Corridor (Y=100px)**: NCB $\rightarrow$ Inbound Callback Rail. Zero middle crossings!
-2. **Track 2 (Consent & Contract Signing Track, Y: 280–360px):**
-   * Col 1: `Digital Contract WebView` $\leftarrow$ Col 3: `bff-mobile-lending` (via dedicated bottom/left bypass).
-   * Col 4: `orch-lending-disbursement-saga` $\rightarrow$ Col 5: `core-loan-contract` $\rightarrow$ Col 6: `adaptor-econsent` $\rightarrow$ Col 7: `eConsent Platform`.
-3. **Track 3 (Deposit & Core Bank Disbursement Track, Y: 400–500px):**
-   * Col 4: `orch-lending-disbursement-saga` $\rightarrow$ Col 5: `core-deposit-account` $\rightarrow$ Col 6: `adaptor-dcb-loan` $\rightarrow$ Col 7: `DCB TM Vault Core`.
-4. **Track 4 (Notification & Instant Payout Track, Y: 520–600px):**
-   * Col 4: `orch-lending-disbursement-saga` $\rightarrow$ Col 5: `core-notification-submit` $\rightarrow$ Col 6: `adaptor-promptpay`.
-5. **Track 5 (Mainline Loan Journey & Engine Track, Y: 620–750px):**
-   * Col 1: `Mobile App` $\rightarrow$ Col 2: `Kong Gateway` $\rightarrow$ Col 3: `bff-mobile-lending` $\rightarrow$ Col 5: `core-lending-engine` $\rightarrow$ `PostgreSQL DB` & `Redis Cache`.
-   * Kafka Events published via **Bottom Corridor (Y=800px)** directly to Col 7 `Kafka Bus`.
+1. **Bureau & Async Callback Track:** webhook rail → Kong → `orch-*-callback` → `core-*-scoring` → `adaptor-*-cb` → bureau, all on the same slot. The webhook return takes its own top-corridor row.
+2. **Consent & Contract Track:** saga → `core-loan-contract` → `adaptor-econsent` → eConsent platform.
+3. **Deposit & Disbursement Track:** saga → `core-deposit-account` → `adaptor-dcb-loan` → core bank.
+4. **Notification & Payout Track:** saga → `core-notification-submit` → `adaptor-promptpay` → platform.
+5. **Mainline Journey Track:** mobile app → Kong → BFF → saga → core engine → PostgreSQL/Redis.
+6. **Event publication** does not need a slot-aligned target: multi-lane `event` edges ride the bottom corridor regardless of rows.
+
+One node per `(lane, slot)` — the engine rejects duplicates. When two flows would collide on a row, give the newer one the next free slot; never share a slot to "save space" (that is what produced stacked wires and overlapping labels).
 
 ---
 
@@ -237,167 +243,58 @@ A Draw.io document must be wrapped in `<mxfile host="app.diagrams.net" pages="2"
 
 ---
 
-## 5. Python Automation Script Template (Multi-Page 2-Tab Diagram)
+## 5. Layout Engine (Declarative Generator)
 
-Use this standardized Python pattern to generate production-ready 2-page Draw.io HLA diagrams, automatically embedding the **Standard Colors and Icons** tab as Page 2:
+Hand-placed coordinates are what produce overlapping wires and stacked labels. Build diagrams with the declarative engine instead: fill three tables — lanes, nodes (lane + slot), edges (kind + short label) — and the engine derives every coordinate, routes corridors, and enforces the label law.
 
 ```python
-import os
-import re
-import xml.etree.ElementTree as ET
-
-def esc(val):
-    if not val:
-        return ""
-    val = val.replace('\r\n', '\n').replace('\r', '\n').replace('\n', '<br>')
-    val = re.sub(r'&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)', '&amp;', val)
-    val = val.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
-    return val
-
-def load_standard_tab_xml():
-    """Loads the official enterprise Standard Colors and Icons tab XML from skill resources."""
-    skill_resource = os.path.expanduser("/Users/ar667337/files/.agents/skills/drawio-hla-architect/resources/standard_icons_tab.xml")
-    if os.path.exists(skill_resource):
-        with open(skill_resource, 'r', encoding='utf-8') as f:
-            return f.read().strip()
-    return ""
-
-def generate_drawio_xml(output_path):
-    # Std Tech & Infrastructure Icon Styles
-    style_pg = "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgdmlld0JveD0iMCAwIDI1LjYgMjUuNiIgaGVpZ2h0PSI2NCI+PHN0eWxlPi5Ce3N0cm9rZS1saW5lY2FwOnJvdW5kfS5De3N0cm9rZS1saW5lam9pbjpyb3VuZH0uRHtzdHJva2UtbGluZWpvaW46bWl0ZXJ9LkV7c3Ryb2tlLXdpZHRoOi43MTZ9PC9zdHlsZT48ZyBzdHJva2U9IiNmZmYiIGZpbGw9Im5vbmUiPjxwYXRoIGNsYXNzPSJEIiBzdHJva2Utd2lkdGg9IjIuMTQ5IiBzdHJva2UtbGluZWNhcD0iYnV0dCIgc3Ryb2tlPSIjMDAwIiBmaWxsPSIjMDAwIiBkPSJNMTguOTgzIDE4LjYzNmMuMTYzLTEuMzU3LjExNC0xLjU1NSAxLjEyNC0xLjMzNmwuMjU3LjAyM2MuNzc3LjAzNSAxLjc5My0uMTI1IDIuNC0uNDAyIDEuMjg1LS41OTYgMi4wNDctMS41OTIuNzgtMS4zMy0yLjg5LjU5Ni0zLjEtLjM4My0zLjEtLjM4MyAzLjA1My00LjUzIDQuMzMtMTAuMjggMy4yMjctMTEuNjg3LTMuMDA0LTMuODQtOC4yMDUtMi4wMjQtOC4yOTItMS45NzVsLS4wMjguMDA1Yy0uNTctLjEyLTEuMi0uMTktMS45My0uMi0xLjMwOC0uMDItMi4zLjM0My0zLjA1NC45MTQgMCAwLTkuMjc3LTMuODIyLTguODQ2IDQuODA3LjA5MiAxLjgzNiAyLjYzIDEzLjkgNS42NiAxMC4yNUM4LjI5IDE1Ljk4NyA5LjM2IDE0Ljg2IDkuMzYgMTQuODZjLjUzLjM1MyAxLjE2Ny41MzMgMS44MzQuNDY4bC4wNTItLjA0NGEyLjAxIDIuMDEgMCAwIDAgLjAyMS41MThjLS43OC44NzItLjU1IDEuMDI1LTIuMTEgMS4zNDYtMS41NzguMzI1LS42NS45MDQtLjA0NiAxLjA1Ni43MzQuMTg0IDIuNDMyLjQ0NCAzLjU4LTEuMTYybC0uMDQ2LjE4M2MuMzA2LjI0NS4yODUgMS43Ni4zMyAyLjg0MnMuMTE2IDIuMDkzLjMzNyAyLjY4OC40OCAyLjEzIDIuNTMgMS43YzEuNzEzLS4zNjcgMy4wMjMtLjg5NiAzLjE0My01LjgxIi8+PHBhdGggc3Ryb2tlPSJub25lIiBmaWxsPSIjMzM2NzkxIiBkPSJNMjMuNTM1IDE1LjZjLTIuODkuNTk2LTMuMS0uMzgzLTMuMS0uMzgzIDMuMDUzLTQuNTMgNC4zMy0xMC4yOCAzLjIyOC0xMS42ODctMy4wMDQtMy44NC04LjIwNS0yLjAyMy04LjI5Mi0xLjk3NmwtLjAyOC4wMDVhMTAuMzEgMTAuMzEgMCAwIDAtMS45MjktLjIwMWMtMS4zMDgtLjAyLTIuMy4zNDMtMy4wNTQuOTE0IDAgMC05LjI3OC0zLjgyMi04Ljg0NiA0LjgwNy4wOTIgMS44MzYgMi42MyAxMy45IDUuNjYgMTAuMjVDOC4yOSAxNS45ODcgOS4zNiAxNC44NiA5LjM2IDE0Ljg2Yy41My4zNTMgMS4xNjcuNTMzIDEuODM0LjQ2OGwuMDUyLS4wNDRhMi4wMiAyLjAyIDAgMCAwIC4wMjEuNTE4Yy0uNzguODcyLS41NSAxLjAyNS0yLjExIDEuMzQ2LTEuNTc4LjMyNS0uNjUuOTA0LS4wNDYgMS4wNTYuNzM0LjE4NCAyLjQzMi40NDQgMy41OC0xLjE2MmwtLjA0Ni4xODNjLjMwNi4yNDUuNTIgMS41OTMuNDg0IDIuODE1cy0uMDYgMi4wNi4xOCAyLjcxNi40OCAyLjEzIDIuNTMgMS43YzEuNzEzLS4zNjcgMi42LTEuMzIgMi43MjUtMi45MDYuMDg4LTEuMTI4LjI4Ni0uOTYyLjMtMS45N2wuMTYtLjQ3OGMuMTgzLTEuNTMuMDMtMi4wMjMgMS4wODUtMS43OTNsLjI1Ny4wMjNjLjc3Ny4wMzUgMS43OTQtLjEyNSAyLjM5LS40MDIgMS4yODUtLjU5NiAyLjA0Ny0xLjU5Mi43OC0xLjMzeiIvPjxnIGNsYXNzPSJFIj48ZyBjbGFzcz0iQiI+PHBhdGggY2xhc3M9IkMiIGQ9Ik0xMi44MTQgMTYuNDY3Yy0uMDggMi44NDYuMDIgNS43MTIuMjk4IDYuNHMuODc1IDIuMDUgMi45MjYgMS42MTJjMS43MTMtLjM2NyAyLjMzNy0xLjA3OCAyLjYwNy0yLjY0N2wuNjMzLTUuMDE3TTEwLjM1NiAyLjJTMS4wNzItMS41OTYgMS41MDQgNy4wMzNjLjA5MiAxLjgzNiAyLjYzIDEzLjkgNS42NiAxMC4yNUM4LjI3IDE1Ljk1IDkuMjcgMTQuOTA3IDkuMjcgMTQuOTA3bTYuMS0xMy40Yy0uMzIuMSA1LjE2NC0yLjAwNSA4LjI4MiAxLjk3OCAxLjEgMS40MDctLjE3NSA3LjE1Ny0zLjIyOCAxMS42ODciLz48cGF0aCBzdHJva2UtbGluZWpvaW49ImJldmVsIiBkPSJNMjAuNDI1IDE1LjE3cy4yLjk4IDMuMS4zODJjMS4yNjctLjI2Mi41MDQuNzM0LS43OCAxLjMzLTEuMDU0LjQ5LTMuNDE4LjYxNS0zLjQ1Ny0uMDYtLjEtMS43NDUgMS4yNDQtMS4yMTUgMS4xNDctMS42NTItLjA4OC0uMzk0LS42OS0uNzgtMS4wODYtMS43NDQtLjM0Ny0uODQtNC43Ni03LjI5IDEuMjI0LTYuMzMzLjIyLS4wNDUtMS41Ni01LjctNy4xNi01Ljc4MlM3Ljk5IDguMTk2IDcuOTkgOC4xOTYiLz48L2c+PGcgY2xhc3M9IkMiPjxwYXRoIGQ9Ik0xMS4yNDcgMTUuNzY4Yy0uNzguODcyLS41NSAxLjAyNS0yLjExIDEuMzQ2LTEuNTc4LjMyNS0uNjUuOTA0LS4wNDYgMS4wNTYuNzM0LjE4NCAyLjQzMi40NDQgMy41OC0xLjE2My4zNS0uNDktLjAwMi0xLjI3LS40ODItMS40NjgtLjIzMi0uMDk2LS41NDItLjIxNi0uOTQuMjN6Ii8+PHBhdGggY2xhc3M9IkIiIGQ9Ik0xMS4xOTYgMTUuNzUzYy0uMDgtLjUxMy4xNjgtMS4xMjIuNDMzLTEuODM2LjM5OC0xLjA3IDEuMzE2LTIuMTQuNTgyLTUuNTM3LS41NDctMi41My00LjIyLS41MjctNC4yMi0uMTg0cy4xNjYgMS43NC0uMDYgMy4zNjVjLS4yOTcgMi4xMjIgMS4zNSAzLjkxNiAzLjI0NiAzLjczMyIvPjwvZz48L2c+PGcgY2xhc3M9IkQiIGZpbGw9IiNmZmYiPjxwYXRoIHN0cm9rZS13aWR0aD0iLjIzOSIgZD0iTTEwLjMyMiA4LjE0NWMtLjAxNy4xMTcuMjE1LjQzLjUxNi40NzJzLjU1OC0uMjAyLjU3NS0uMzItLjIxNS0uMjQ2LS41MTYtLjI4OC0uNTYuMDItLjU3NS4xMzZ6Ii8+PHBhdGggc3Ryb2tlLXdpZHRoPSIuMTE5IiBkPSJNMTkuNDg2IDcuOTA2Yy4wMTYuMTE3LS4yMTUuNDMtLjUxNi40NzJzLS41Ni0uMjAyLS41NzUtLjMyLjIxNS0uMjQ2LjUxNi0uMjg4LjU2LjAyLjU3NS4xMzZ6Ii8+PC9nPjxwYXRoIGNsYXNzPSJCIEMgRSIgZD0iTTIwLjU2MiA3LjA5NWMuMDUuOTItLjE5OCAxLjU0NS0uMjMgMi41MjQtLjA0NiAxLjQyMi42NzggMy4wNS0uNDEzIDQuNjgiLz48L2c+PC9zdmc+;fontSize=10;fontStyle=1;align=center;"
-    style_redis = "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://dashboard.snapcraft.io/site_media/appmedia/2020/08/1529926.png;fontSize=10;fontStyle=1;align=center;strokeWidth=1;fillColor=none;"
-    style_kong = "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://seeklogo.com/images/K/kong-logo-30290787E5-seeklogo.com.png;fontSize=10;fontStyle=1;align=center;"
-    style_kafka = "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://www.svgrepo.com/show/353951/kafka-icon.svg;fontSize=10;fontStyle=1;align=center;"
-    
-    # Microservice Kubernetes Pod Styles
-    style_new_pod = "sketch=0;html=1;dashed=0;whitespace=wrap;fillColor=#dae8fc;strokeColor=#03CCFF;strokeWidth=2;points=[[0.005,0.63,0],[0.1,0.2,0],[0.9,0.2,0],[0.5,0,0],[0.995,0.63,0],[0.72,0.99,0],[0.5,1,0],[0.28,0.99,0]];verticalLabelPosition=bottom;align=center;verticalAlign=top;shape=mxgraph.kubernetes.icon;prIcon=pod;fontSize=9.5;fontStyle=1;fontColor=#000000;"
-    style_reuse_pod = "sketch=0;html=1;dashed=0;whitespace=wrap;fillColor=#f5f5f5;strokeColor=#BFBFBF;strokeWidth=1.5;points=[[0.005,0.63,0],[0.1,0.2,0],[0.9,0.2,0],[0.5,0,0],[0.995,0.63,0],[0.72,0.99,0],[0.5,1,0],[0.28,0.99,0]];verticalLabelPosition=bottom;align=center;verticalAlign=top;shape=mxgraph.kubernetes.icon;prIcon=pod;fontSize=9.5;fontStyle=1;fontColor=#000000;"
-    
-    # Edge Routing Style with Mandatory Arc Jumps
-    style_sync = "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;jumpStyle=arc;jumpSize=6;html=1;strokeColor=#006666;strokeWidth=2;endArrow=classic;"
-
-    page_1_diagram = f"""  <diagram name="System HLA Overview" id="HLA_Overview">
-    <mxGraphModel dx="3000" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="1080" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        
-        <!-- Swimlane 2: Dedicated Gateway Layer (Kong API Gateway) -->
-        <mxCell id="lane_gw" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#4a5568;strokeWidth=1.5;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingTop=10;opacity=70;" value="{esc('Gateway Layer (Kong API Gateway)')}" vertex="1">
-          <mxGeometry x="310" y="70" width="180" height="820" as="geometry" />
-        </mxCell>
-        <mxCell id="node_kong" parent="1" style="{style_kong}" value="{esc('Kong API Gateway')}" vertex="1">
-          <mxGeometry x="375" y="560" width="48" height="48" as="geometry" />
-        </mxCell>
-
-        <!-- Swimlane 3: Channel BFF Layer -->
-        <mxCell id="lane_bff" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.2;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingTop=10;opacity=50;" value="{esc('Channel BFF (bff-mobile-*)')}" vertex="1">
-          <mxGeometry x="510" y="70" width="240" height="820" as="geometry" />
-        </mxCell>
-        <mxCell id="node_bff" parent="1" style="{style_new_pod}" value="{esc('bff-mobile-sample')}" vertex="1">
-          <mxGeometry x="610" y="560" width="40" height="40" as="geometry" />
-        </mxCell>
-
-        <!-- Swimlane 4: Orchestration Layer -->
-        <mxCell id="lane_orch" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.2;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingTop=10;opacity=50;" value="{esc('Orchestration Layer (orch-*)')}" vertex="1">
-          <mxGeometry x="770" y="70" width="260" height="820" as="geometry" />
-        </mxCell>
-
-        <!-- Swimlane 5: Domain Core Layer with Std DB & Redis Icons -->
-        <mxCell id="lane_core" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.2;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingTop=10;opacity=50;" value="{esc('Domain Core (core-*)')}" vertex="1">
-          <mxGeometry x="1050" y="70" width="480" height="820" as="geometry" />
-        </mxCell>
-        <mxCell id="node_db" parent="1" style="{style_pg}" value="{esc('PostgreSQL\n(domain_db)')}" vertex="1">
-          <mxGeometry x="1130" y="560" width="46" height="46" as="geometry" />
-        </mxCell>
-        <mxCell id="node_redis" parent="1" style="{style_redis}" value="{esc('Redis Cache\n(domain_cache)')}" vertex="1">
-          <mxGeometry x="1360" y="560" width="45" height="45" as="geometry" />
-        </mxCell>
-
-        <!-- Connections -->
-        <mxCell id="e_kong_bff" edge="1" parent="1" source="node_kong" target="node_bff" style="{style_sync}">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>"""
-
-    # Page 2: Load Standard Tab XML
-    page_2_std = load_standard_tab_xml()
-
-    # Wrap in Multi-Page mxfile
-    full_xml = f"""<mxfile host="app.diagrams.net" pages="2">
-{page_1_diagram}
-{page_2_std}
-</mxfile>"""
-
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(full_xml)
-    
-    ET.parse(output_path)
-    print(f"Generated 2-Page HLA Draw.io XML: {output_path}")
-
-if __name__ == "__main__":
-    generate_drawio_xml("CLICX_Sample_HLA.drawio.xml")
+# resources/hla_generator.py — edit the tables at the top, then run:
+#   python3 hla_generator.py out.drawio.xml
+LANES = [  # (id, title, width, fill, stroke) — left to right
+    ("lane_client", "Client & Inbound Rails", 240, "#ECECEC", "#4a5568"),
+    # ... one lane per tier, never merged (Invariant 2)
+]
+NODES = [  # (id, lane, slot, label, kind) — one node per (lane, slot)
+    ("n_kong", "lane_gw", 3, "Kong API Gateway", "pod_new"),
+    ("n_db", "lane_core", 4, "PostgreSQL\n(sample_db)", "pod_reuse"),
+]
+EDGES = [  # (id, src, dst, kind, label) — kind: sync | async | event | view
+    ("e_pay", "n_orch_saga", "n_adapt_pay", "sync", "payout"),
+    ("e_kafka", "n_orch_saga", "n_kafka", "event", "loan.events"),
+]
 ```
+
+**Routing law (implemented in the engine; do not freehand around it):**
+* **Rows:** a node's slot fixes its Y. Forward edges between adjacent lanes run straight on the row (equal Y-band).
+* **Dips:** a forward edge spanning 2+ lanes over an occupied row dips through the inter-row gap band (below the row's labels, above the next row's nodes), choosing the side (above/below) with fewer same-lane hop conflicts, and exits vertically (`exitX=0.75`) so it never shares a ray with a straight row wire.
+* **Event bus:** multi-lane `event` edges route through the **bottom corridor** below the lanes, one corridor row per edge.
+* **Returns:** backward (right-to-left) edges get their own **top corridor** row above the lane band (Y=85+18·n) with explicit waypoints — never through lane headers, never diagonal.
+* **Same-lane hops:** adjacent slots connect bottom→top; farther slots route down the lane's inner gutter, never through the node between them.
+* **Arc jumps:** every edge style carries `jumpStyle=arc;jumpSize=6;`.
+* **Labels obey the label law (Invariant 7)** — the engine rejects over-long labels at generation time.
+
+The engine resolves `resources/standard_icons_tab.xml` relative to its own file location (no absolute paths), assembles the mandatory 2-page structure (§4), and validates the XML with `ElementTree.parse` before writing.
+
 
 ---
 
-## 6. Microservice Flow Tracing & Zero-Orphan Verification
+## 6. Layout Verification Gate (Zero-Orphan + Zero-Overlap)
 
-Every single microservice placed on an HLA diagram MUST answer three architectural flow questions:
-1. **Trigger / Inbound:** Who calls this service? (e.g. Kong, BFF, Orchestrator Saga, or Inbound Webhook).
-2. **Business Action:** What does this service do? (e.g. validation, scoring, contract generation).
-3. **Outbound / Downstream:** Where does the result go? (e.g. calls Core DB/Cache, calls Adaptor, or updates Saga status).
+Run the gate on every generated `.drawio.xml` before publication — it exits non-zero on any violation, so clean layout is a check, not an eyeball review:
 
-### Flow Tracing for Asynchronous Callback Receivers (`orch-*-callback`):
-Callback receivers (like `orch-ncb-callback`) must NEVER float as disconnected boxes:
-* **Step 1 (Inbound):** External Partner $\rightarrow$ routes async webhook via **Top Bypass Corridor (Y=100)** to Inbound Rail (`NCB Webhook Callback` in Swimlane 1).
-* **Step 2 (Dispatch):** Inbound Rail forwards webhook payload $\rightarrow$ `orch-ncb-callback` in Swimlane 4.
-* **Step 3 (Downstream):** `orch-ncb-callback` calls `core-credit-scoring` in Swimlane 5 to persist score and advance underwriting state.
-
-### Automated Zero-Orphan Python Verification Script:
-Run this check on all generated `.drawio.xml` files before publication:
-
-```python
-import os
-import xml.etree.ElementTree as ET
-
-def verify_zero_orphan_nodes(xml_file):
-    tree = ET.parse(xml_file)
-    p1 = tree.getroot().findall("diagram")[0]
-    
-    # Collect all component nodes (exclude containers/lanes/titles/legends/labels/decorative icons)
-    ignore_prefixes = ("lane_", "col_", "box_", "title", "leg_", "lbl_")
-    ignore_exact = {"icon_dcb_vault", "node_ext_kafka_icon"}
-    nodes = {
-        c.get("id"): c.get("value") 
-        for c in p1.findall(".//mxCell") 
-        if c.get("vertex") == "1" 
-        and not any(c.get("id", "").startswith(p) for p in ignore_prefixes) 
-        and c.get("id") not in ignore_exact
-    }
-    
-    # Collect edge sources and targets
-    sources = {c.get("source") for c in p1.findall(".//mxCell") if c.get("edge") == "1"}
-    targets = {c.get("target") for c in p1.findall(".//mxCell") if c.get("edge") == "1"}
-    
-    # Check for completely disconnected nodes
-    orphans = [nid for nid in nodes if nid not in sources and nid not in targets]
-    if orphans:
-        raise ValueError(f"❌ ZERO ORPHAN VIOLATION: Disconnected nodes found: {orphans}")
-        
-    # Check callback receivers specifically (must have BOTH incoming and outgoing)
-    for nid, val in nodes.items():
-        if "callback" in str(val).lower() or "cb_receiver" in nid:
-            if nid not in sources or nid not in targets:
-                raise ValueError(f"❌ CALLBACK RECEIVER FLOW INCOMPLETE: {nid} must have BOTH incoming trigger and downstream call!")
-                
-    print(f"✅ ZERO ORPHAN VERIFICATION PASSED: All {len(nodes)} microservices/components are fully wired!")
-
-if __name__ == "__main__":
-    verify_zero_orphan_nodes("demo_hla/CLICX_SME_Lending_HLA.drawio.xml")
+```bash
+python3 resources/verify_layout.py out.drawio.xml              # default: 0-crossing budget
+python3 resources/verify_layout.py out.drawio.xml --max-crossings=2
 ```
+
+**The four gates:**
+1. **Connectivity** — zero orphan nodes; `*callback*` receivers must have BOTH an incoming trigger and an outgoing downstream call.
+2. **Node overlap** — component boxes (including their below-icon label overflow) must not collide with each other.
+3. **Label hygiene** — every edge label obeys the label law (≤ 24 chars × 2 lines); no label may overlap a node.
+4. **Wire discipline** — no two wires stacked on the same line; no wire may pass through a node it does not source or target; crossings within the declared budget (every edge is arc-jumped, so a budgeted crossing renders as a clean bridge).
+
+`RESULT: PASS` with exit 0 is the publication gate. On `FAIL`, fix the declarative model (slot assignments, labels, edge kinds) and regenerate — never hand-nudge coordinates in the XML, because the next regeneration loses them.
+
 
 ---
 
@@ -406,7 +303,9 @@ if __name__ == "__main__":
 Before publishing any Draw.io HLA diagram, verify the following:
 
 - [ ] **Zero Orphan Nodes:** Every single component (especially `orch-*-callback` and background workers) has verified incoming triggers and outgoing downstream calls.
-- [ ] **Minimal Wire Crossings (Planar Tracks):** Microservices align horizontally along equal Y-band tracks (Tracks 1–5). Long returns (webhooks) use Top Corridor (Y < 120px) and events use Bottom Corridor (Y > 800px).
+- [ ] **Engine Routing Law:** Rows straight on slot bands; multi-lane spans dip through gap bands; returns via top-corridor rows; events via the bottom corridor; far same-lane hops via the lane gutter (§5).
+- [ ] **Label Law:** every edge label ≤ 24 chars × 2 lines with `labelBackgroundColor`; full topic names live in tooltips or the legend, never on the canvas.
+- [ ] **Layout Gate:** `python3 resources/verify_layout.py <file>` exits 0 — zero orphans, zero overlaps, zero stacking, crossings within budget (§6).
 - [ ] **Arc Jumps Configured:** All crossing edges have `jumpStyle=arc;jumpSize=6;` configured.
 - [ ] **Dedicated Swimlanes:** Kong Gateway, Channel BFF, Orchestrator, Domain Core, and Adaptor each reside in their own separate swimlane. No tier merging.
 - [ ] **Standard Database Icons:** PostgreSQL, MySQL, MongoDB, and Redis use official Standard Icons from the standard palette rather than plain cylinders alone.
