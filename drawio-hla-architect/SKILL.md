@@ -6,7 +6,12 @@ description: >-
   infrastructure icons (PostgreSQL, MySQL, MongoDB, Redis, Kafka, Kong, Apigee, Vault),
   mandatory multi-swimlane separation (Kong Gateway, BFF, Orch, Core, and Adaptor each in their
   own dedicated swimlane), 2-page structure (with 'Standard Colors and Icons' tab in every diagram),
-  zero-orphan connectivity checks, wire-crossing minimization with a slot-based layout engine (corridor routing, gutter hops, dip bands), a short edge-label law, and a mechanical layout verification gate (zero-orphan, zero-overlap, zero-stacking) before publication.
+  reachability checks, interval-coloured routing (lines shared by span, verticals in node-free
+  lane channels, anchors offset per edge, labels placed clear of nodes and wires), a short edge-label law,
+  one declarative model rendered as a design view, an implementation view, or both with the gap marked
+  (spec versus implemented, so the two cannot drift), and a mechanical layout verification gate the
+  generator runs on its own output and refuses to write past, covering orphans, unreachable
+  microservices, wire envelope, cell fit, and source-coordinate leaks.
 ---
 
 # Draw.io HLA Architecture & Standards Guide
@@ -41,12 +46,14 @@ This skill provides comprehensive standards, XML templates, and visual conventio
      2. Inbound Webhook $\rightarrow$ routes through Gateway/BFF to Orchestrator Callback Receiver (`orch-*-callback`) in Swimlane 4.
      3. Callback Receiver $\rightarrow$ calls Domain Core (`core-*`) in Swimlane 5 to update status, store verification scores, or advance the 2PC saga.
 
-4. **Wire-Crossing Minimization (Deterministic Routing Law):**
-   Clean layout comes from the slot engine, not from hand-tuned coordinates (§5):
-   * **Equal Y-Band Rows:** a node's slot fixes its Y; forward edges between adjacent lanes run straight on the row.
-   * **Dip Bands:** multi-lane forward spans dip through the inter-row gap band with fewer same-lane hop conflicts, exiting vertically so they never share a ray with a row wire.
-   * **Bypass Corridors:** backward (right-to-left) flows take their own top-corridor row above the lane band; multi-lane `event` edges take the bottom corridor — each with explicit orthogonal waypoints (`<Array as="points"><mxPoint x="..." y="..."/></Array>`), never diagonally across middle tiers, never through lane headers.
-   * **Arc Jump Rendering:** Every edge MUST include `jumpStyle=arc;jumpSize=6;` so that whenever lines do cross, Draw.io automatically renders a clean arc bridge.
+4. **Wire-Crossing Minimization (Interval-Coloured Routing Law):**
+   Clean layout comes from the engine, not from hand-tuned coordinates (§5):
+   * **Equal Y-Band Rows:** a node's slot fixes its Y; forward edges between adjacent lanes run straight on the row. Each edge's anchor is offset along the node's edge, so two wires on one row are **parallel, never collinear**.
+   * **Node-Free Channels:** every vertical leg is allocated in a lane's **node-free side channel** (the strip left of the node column and the strip right of it). A leg pinned to a node's **centre** is inside every node stacked above or below it in that lane, which is the single largest source of `wire passes through node` failures.
+   * **Interval Colouring:** a vertical line and a corridor row are **lines wires share, not resources each wire owns**. A line is reused whenever the new span cannot touch a span already on it, so two wires on one line are safe *by construction* and `wires stacked` cannot fire. One line per wire is what exhausts the bands and pushes wires off the bottom of the page.
+   * **Bounded Corridors:** forward multi-lane spans dip through the gap band **between slot rows** (offsets measured from the row's top, so `SLOT_H + n` lands in the gap); right-to-left returns take the band **above** the lanes, falling back to the bus below when the top band is full. A wire must never leave the page.
+   * **Arc Jump Rendering:** Every edge MUST include `jumpStyle=arc;jumpSize=6;` so that whenever lines do cross, Draw.io renders a clean arc bridge.
+   * **Crossing budget:** non-planarity is inherent (a Kafka hub plus a core hub forms a K₃,₃-like subgraph), so the budget is declared, not zero — the engine uses `MAX_CROSSINGS = 2` and every crossing is arc-jumped.
 
 5. **Standard Database Icons (PostgreSQL, MySQL, MongoDB, Redis):**
    Database components **MUST use official Standard Database Icons** (Vector SVG / Image) from the standard palette rather than plain cylinders alone. **Mandatory:** All standard image icons MUST include `html=1;` and `whiteSpace=wrap;` in their style to allow multiline `<br>` labels without raw `<br>` tags leaking onto the canvas:
@@ -63,10 +70,16 @@ This skill provides comprehensive standards, XML templates, and visual conventio
 7. **Edge Label Discipline (Label Law):**
    * Every edge label **MUST** be ≤ 24 characters per line, ≤ 2 lines, and carry `labelBackgroundColor` so text stays readable where it crosses a wire.
    * Full topic names and payload detail **NEVER** go on the canvas: the label is the short verb or trimmed topic; the full name lives in the tooltip or the legend.
-   * Parallel wires sharing a row pin their labels at staggered positions (an `x` offset on the label child cell) so text never stacks at the same midpoint.
+   * Labels are **placed, not guessed**: the engine searches `frac` along the wire and a vertical `off` for a position that clears every node box and its label box and rides no other wire (§5). Parallel wires on one row therefore never stack their text at one midpoint.
 
-8. **Layout Quality Gate (Mechanical, Not Eyeball):**
-   * `python3 resources/verify_layout.py <file>.drawio.xml` **MUST** exit 0 before publication: zero orphans, zero node overlaps, zero label violations, zero stacked wires, zero wire-through-node, crossings within budget.
+8. **Layout Quality Gate (Mechanical, and Self-Enforced by the Engine):**
+   * `python3 resources/verify_layout.py <file>.drawio.xml` **MUST** exit 0 before publication: zero orphans, zero node overlaps, zero label violations, zero stacked wires, zero wire-through-node, no wire off the page, crossings within budget.
+   * **Reachability, not just presence:** a microservice (`prIcon=pod`) that calls something but is **never called** is a violation. Drawn unreachable, the reader cannot tell where it is entered from - which is how an adaptor with no inbound wire ships unnoticed. Clients, external platforms and data stores are entry points or sinks by nature and are exempt.
+   * **A cell must show its own text.** A table cell narrower or shorter than its content does not shrink the text; it draws it through the neighbouring cell. Font size is per column (a 9pt bold step cell needs a taller row than an 8pt body cell) and a wrapped row **MUST** grow to fit. This is the table's version of a label overlapping a node.
+   * **No source coordinates.** A file name, a package path, a function name or a line number in a cell is a violation: the diagram is read by people without the repository open, and such a coordinate is stale the next time the code moves. Name the behaviour.
+   * **Titled containers:** a panel drawn `verticalAlign=top;spacingTop=8` renders its caption inside its own top band; content **MUST** start below it, or the caption strikes through the first child row. Nothing per-element sees this - the caption is not a cell.
+   * The generator **gates its own output** and refuses to write a file its checker rejects — a model that cannot route cleanly is a *modelling* problem (too few slots, too many edges on one node, an over-long label), so it fails loudly with the violation list instead of shipping. A refused model leaves no file behind.
+   * **Annotations are not components:** text cells (`style="text;..."`) are excluded from the orphan and overlap checks. A title or legend line cannot be wired, so flagging it as an orphan is a false positive that teaches readers to ignore the gate.
    * Fix violations in the declarative model (slots, labels, edge kinds) and regenerate — never by hand-nudging coordinates in the generated XML.
 
 ---
@@ -198,7 +211,7 @@ All end-to-end HLA diagrams must use the standardized 7-swimlane spatial layout.
 
 ```
 Width: ~2200px+ | Height: dynamic (slot count × 90px + bands) | Margin: X=50, lanes top Y=130,
-top corridor band Y<130 (reserved), bottom corridor below lanes (reserved)
+top corridor band above LANE_TOP (reserved for returns), bus below the lanes (reserved for multi-lane spans)
 
 ┌────────────┬─────────────┬─────────────┬──────────────┬─────────────┬─────────────┬────────────────────┐
 │ Swimlane 1 │ Swimlane 2  │ Swimlane 3  │  Swimlane 4  │ Swimlane 5  │ Swimlane 6  │     Swimlane 7     │
@@ -229,7 +242,7 @@ The engine fixes every Y from the node's **slot** (§5) — slot assignment is t
 3. **Deposit & Disbursement Track:** saga → `core-deposit-account` → `adaptor-dcb-loan` → core bank.
 4. **Notification & Payout Track:** saga → `core-notification-submit` → `adaptor-promptpay` → platform.
 5. **Mainline Journey Track:** mobile app → Kong → BFF → saga → core engine → PostgreSQL/Redis.
-6. **Event publication** does not need a slot-aligned target: multi-lane `event` edges ride the bottom corridor regardless of rows.
+6. **Event publication** does not need a slot-aligned target: multi-lane `event` edges ride a corridor row regardless of the row they leave.
 
 One node per `(lane, slot)` — the engine rejects duplicates. When two flows would collide on a row, give the newer one the next free slot; never share a slot to "save space" (that is what produced stacked wires and overlapping labels).
 
@@ -237,15 +250,51 @@ One node per `(lane, slot)` — the engine rejects duplicates. When two flows wo
 
 ## 4. Draw.io Multi-Page XML Requirement
 
-A Draw.io document must be wrapped in `<mxfile host="app.diagrams.net" pages="2">` and contain:
+A Draw.io document must be wrapped in `<mxfile host="app.diagrams.net" pages="N">` and contain:
 1. `<diagram name="HLA Overview" id="...">`
 2. `<diagram name="Standard Colors and Icons" id="ao9VHCrxs2CTfegMv53f">`
+3. any further views (a step trace, a legend) after those two, never before.
+
+**A trace page describes behaviour, not code.** When the third page enumerates
+steps, its columns are business-facing: step id, business action, actor, call,
+target component, tables touched. It **MUST NOT** carry a file name, a function
+name or a line number - the page is read by people without the repository open,
+and such a coordinate is stale the next time the code moves. A step whose
+integration is simulated in-process is **not** an implemented path: leave it off
+the trace, or mark it, rather than listing it beside real routes where a reader
+cannot tell them apart. The gate enforces the text half of this (`No source
+coordinates`, §6); whether a row belongs on the page is a modelling decision.
 
 ---
 
 ## 5. Layout Engine (Declarative Generator)
 
-Hand-placed coordinates are what produce overlapping wires and stacked labels. Build diagrams with the declarative engine instead: fill three tables — lanes, nodes (lane + slot), edges (kind + short label) — and the engine derives every coordinate, routes corridors, and enforces the label law.
+Hand-placed coordinates are what produce overlapping wires and stacked labels. Build diagrams with the declarative engine instead: fill three tables — lanes, nodes (lane + slot), edges (kind + short label + status) — and the engine derives every coordinate, routes corridors, and enforces the label law.
+
+**Where labels come from.** An edge label is the short verb or the trimmed topic
+("payout", "webhook.recieve"), never the full route or the full topic name - the
+full text goes in the tooltip.
+
+**Labels that carry step ids.** A trace diagram puts the flow name on line one
+and the step list on line two. Give the edge a 7th tuple element, the steps it
+carries, and the engine renders and verifies the label:
+
+```python
+EDGES = [
+    ("e_saga", "n_bff", "n_orch_saga", "sync", "REST", "impl",
+     ("A1", "A2", "A3", "A4", "B1")),          # -> "REST" / "A1-A4,B1"
+]
+```
+
+* `-` is an exact consecutive range, and the engine **proves** the rendered
+  label enumerates exactly the steps the edge carries. Extending a range from
+  the previous element instead of tracking its start is a real bug that drops
+  ids silently (`A1,A2,A3` rendered as `A2-A3`); the validator refuses it.
+* `..` marks a **bracket**: `A2.2..B10.2 (15)`. A list too long for the 24-char
+  bound is named by its endpoints and count and enumerated elsewhere (the trace
+  page), so the label never claims to name every step.
+* Never label a wire with a step the wire does not travel. A step with no wire
+  of its own belongs in the trace table, not guessed onto a nearby edge.
 
 ```python
 # resources/hla_generator.py — edit the tables at the top, then run:
@@ -258,27 +307,56 @@ NODES = [  # (id, lane, slot, label, kind) — one node per (lane, slot)
     ("n_kong", "lane_gw", 3, "Kong API Gateway", "pod_new"),
     ("n_db", "lane_core", 4, "PostgreSQL\n(sample_db)", "pod_reuse"),
 ]
-EDGES = [  # (id, src, dst, kind, label) — kind: sync | async | event | view
-    ("e_pay", "n_orch_saga", "n_adapt_pay", "sync", "payout"),
-    ("e_kafka", "n_orch_saga", "n_kafka", "event", "loan.events"),
+EDGES = [  # (id, src, dst, kind, label, status) — kind: sync | async | event | view
+    ("e_pay", "n_orch_saga", "n_adapt_pay", "sync", "payout", "impl"),
+    ("e_kafka", "n_orch_saga", "n_kafka", "event", "loan.events", "impl"),
+    ("e_kyc", "n_orch_saga", "n_kyc", "sync", "planned KYC", "spec"),
 ]
 ```
+
+**One model, three views (spec and implementation cannot drift).** `status` on a
+node or an edge is `impl` (built, the default when omitted) or `spec` (designed,
+not built). Rendering is chosen by one flag:
+
+```bash
+python3 hla_generator.py out.drawio.xml              # both; spec items grey+dashed
+python3 hla_generator.py out.drawio.xml --from impl  # only what is built
+python3 hla_generator.py out.drawio.xml --from spec  # only what is designed
+```
+
+A `spec` node or edge renders **grey and dashed** so a plan never reads as a
+fact. Nodes are never filtered out: a component declared in the model but not
+wired in the current view is dimmed, not dropped - dropping it would hide the
+service, and dimming says "nothing here yet" without denying it exists. The
+title band states which view is on the page and how many edges are built versus
+planned. Deriving both views from one table is the point: two hand-maintained
+diagrams that disagree about what exists are worse than one that marks the gap.
+
+**Reconciling against code.** Filling `status` is where a design and a
+repository are compared: mark `impl` only what you can point at in the code, and
+anything you cannot is `spec`. When a component is documented but has **no code
+reference anywhere**, leaving it in the model as `spec` is right and drawing it
+as built is not - an unreachable service on a "current architecture" page is a
+false statement, and the gate's reachability rule will not save you because the
+wire can be invented as easily as the node.
 
 **Routing law (implemented in the engine; do not freehand around it):**
 * **Rows:** a node's slot fixes its Y. Forward edges between adjacent lanes run straight on the row (equal Y-band).
 * **Dips:** a forward edge spanning 2+ lanes over an occupied row dips through the inter-row gap band (below the row's labels, above the next row's nodes), choosing the side (above/below) with fewer same-lane hop conflicts, and exits vertically (`exitX=0.75`) so it never shares a ray with a straight row wire.
-* **Event bus:** multi-lane `event` edges route through the **bottom corridor** below the lanes, one corridor row per edge.
-* **Returns:** backward (right-to-left) edges get their own **top corridor** row above the lane band (Y=85+18·n) with explicit waypoints — never through lane headers, never diagonal.
-* **Same-lane hops:** adjacent slots connect bottom→top; farther slots route down the lane's inner gutter, never through the node between them.
+* **Event bus:** multi-lane `event` edges route through a corridor row, shared by span (interval colouring), not one row per edge.
+* **Returns:** backward (right-to-left) edges take the band above the lane band with explicit waypoints, falling back below the lanes when that band is full — never through lane headers, never off the page.
+* **Same-lane hops:** *every* same-lane hop leaves and re-enters through the lane's **node-free side channel**, never the node centre — the centre of one node lies inside every node stacked with it in that lane.
+* **Anchors:** each edge's exit/entry is offset along the node's edge, so wires sharing a row are parallel rather than collinear (collinear wires are what the checker calls `stacked`).
+* **Waypoint y:** a waypoint's y **MUST** equal its anchor's y. A waypoint on the bare row y with an offset anchor makes the first segment diagonal, and the checker then reports crossings that do not exist.
 * **Arc jumps:** every edge style carries `jumpStyle=arc;jumpSize=6;`.
-* **Labels obey the label law (Invariant 7)** — the engine rejects over-long labels at generation time.
+* **Labels obey the label law (Invariant 7)** — the engine rejects over-long labels at generation time, and then **places** each label: it walks the wire and searches a vertical offset for a spot that clears every node box, every node label box, and every other wire. That search is what removes the "label rides wire" warnings instead of merely tolerating them.
 
 The engine resolves `resources/standard_icons_tab.xml` relative to its own file location (no absolute paths), assembles the mandatory 2-page structure (§4), and validates the XML with `ElementTree.parse` before writing.
 
 
 ---
 
-## 6. Layout Verification Gate (Zero-Orphan + Zero-Overlap)
+## 6. Layout Verification Gate (Reachability, Fit, and No Code Leaks)
 
 Run the gate on every generated `.drawio.xml` before publication — it exits non-zero on any violation, so clean layout is a check, not an eyeball review:
 
@@ -287,13 +365,33 @@ python3 resources/verify_layout.py out.drawio.xml              # default: 0-cros
 python3 resources/verify_layout.py out.drawio.xml --max-crossings=2
 ```
 
-**The four gates:**
+Beyond layout, the gate reads the diagram the way a reviewer does and fails on
+four defects that geometry alone cannot see (each was a real reported defect):
+
+| Rule | Fails when |
+|---|---|
+| **Reachability** | a `prIcon=pod` microservice has no incoming wire; clients, external platforms and stores are entry points or sinks and are exempt |
+| **Cell fit** | any cell's text cannot fit its own box at its own font size, in either dimension — the table's version of a label overlapping a node |
+| **No source coordinates** | a cell carries a file name, a package path, a function name or a line number |
+| **Title band** | a titled container's content starts inside its own caption band, so the caption strikes through it |
+
+The last two are the ones a diagram review always catches and a geometry check
+never does. A source coordinate is stale the next time the code moves, and the
+diagram is read by people without the repository open; a caption struck by its
+first row looks like a rendering bug even though every element is legal.
+
+**The gates:**
 1. **Connectivity** — zero orphan nodes; `*callback*` receivers must have BOTH an incoming trigger and an outgoing downstream call.
 2. **Node overlap** — component boxes (including their below-icon label overflow) must not collide with each other.
 3. **Label hygiene** — every edge label obeys the label law (≤ 24 chars × 2 lines); no label may overlap a node.
 4. **Wire discipline** — no two wires stacked on the same line; no wire may pass through a node it does not source or target; crossings within the declared budget (every edge is arc-jumped, so a budgeted crossing renders as a clean bridge).
+5. **Wire envelope** — no wire leaves the page, and none strays past the lane band horizontally. A bus below the lanes is legitimate (the event-bus rule), so depth is reported as a warning, while leaving the page is a hard failure. This is the "lines go to the bottom of the page" defect: it is invisible to every per-segment rule, because each segment is individually legal.
 
 `RESULT: PASS` with exit 0 is the publication gate. On `FAIL`, fix the declarative model (slot assignments, labels, edge kinds) and regenerate — never hand-nudge coordinates in the XML, because the next regeneration loses them.
+
+The generator calls this module directly (`verify_layout.verify(..., quiet=True)`) and **refuses to write** a file that fails, printing the violations and exiting non-zero. The checker is therefore a sensor the engine cannot forget to run, not a step someone must remember. Annotations (`style="text;..."`) are excluded from the orphan and overlap checks: a title or legend line cannot be wired.
+
+Connectivity is checked against the **whole model**, once, inside `_validate_model`. A filtered render (design-only or implementation-only) legitimately shows unwired components, so `verify(..., require_connectivity=False)` is only for those views - never for the complete diagram.
 
 
 ---
@@ -303,7 +401,12 @@ python3 resources/verify_layout.py out.drawio.xml --max-crossings=2
 Before publishing any Draw.io HLA diagram, verify the following:
 
 - [ ] **Zero Orphan Nodes:** Every single component (especially `orch-*-callback` and background workers) has verified incoming triggers and outgoing downstream calls.
-- [ ] **Engine Routing Law:** Rows straight on slot bands; multi-lane spans dip through gap bands; returns via top-corridor rows; events via the bottom corridor; far same-lane hops via the lane gutter (§5).
+- [ ] **Engine Routing Law:** Rows straight on slot bands; multi-lane spans dip through the inter-row gap bands; returns above the lanes; same-lane hops via the lane's **node-free side channel**; every vertical allocated by interval colouring, never on a node centre (§5).
+- [ ] **Wire Envelope:** no wire runs off the page or outside the lane band horizontally — the engine's own gate rejects it, and a refusal leaves no file (§6).
+- [ ] **Reachability:** every microservice has an incoming wire; every external platform and store an outgoing one (§6).
+- [ ] **Cell fit:** every table cell is sized for its own text at its own font size, and no cell carries a file name, function name or line number (§6).
+- [ ] **Provenance stated:** the model's `status` fields say what is built and what is only designed, and the rendered view matches the question being asked (§5).
+- [ ] **Labels carry their steps:** a wire labelled with step ids reproduces exactly the steps it carries — the engine proves it, and a range that silently drops an id is refused (§5).
 - [ ] **Label Law:** every edge label ≤ 24 chars × 2 lines with `labelBackgroundColor`; full topic names live in tooltips or the legend, never on the canvas.
 - [ ] **Layout Gate:** `python3 resources/verify_layout.py <file>` exits 0 — zero orphans, zero overlaps, zero stacking, crossings within budget (§6).
 - [ ] **Arc Jumps Configured:** All crossing edges have `jumpStyle=arc;jumpSize=6;` configured.

@@ -52,6 +52,125 @@ def _label_box(x, y, w, h, style, value):
         return (x + w / 2 - lw / 2, y + h, lw, lh)
     return (x + w / 2 - lw / 2, y + h / 2 - lh / 2, lw, lh)
 
+def _title_band_check(cells, geo):
+    """A titled container's own title must not strike through its content.
+
+    The reported defect this catches: a white panel box drawn with
+    `verticalAlign=top;spacingTop=8` at fontSize 12 renders its title inside
+    the top ~28px of the box, and content placed at `box_top + 12` is drawn
+    straight through it. Nothing in a per-element check sees this, because the
+    title is not a cell and the first child is not overlapping anything.
+
+    Returns [(container_id, child_id, child_y, band_end)].
+    """
+    out = []
+    titled = []
+    for cid, c in cells.items():
+        if c.get("vertex") != "1" or not cid:
+            continue
+        st = _style_of(c)
+        if not str(c.get("value") or "").strip():
+            continue
+        # a container: large enough to hold children, and its text is the
+        # caption rather than a component name
+        g = geo.get(cid)
+        if not g or g[2] < 200 or g[3] < 120:
+            continue
+        if any(cid.startswith(p) for p in ("lane_", "col_")):
+            continue
+        fs = float(_style_val(st, "fontSize", 12) or 12)
+        if _style_val(st, "verticalAlign") != "top":
+            continue
+        titled.append((cid, g, fs * 1.5 + float(
+            _style_val(st, "spacingTop", 0) or 0)))
+    for cid, c in cells.items():
+        if c.get("vertex") != "1" or not cid or cid in {t[0] for t in titled}:
+            continue
+        if not str(c.get("value") or "").strip():
+            continue
+        g = geo.get(cid)
+        if not g:
+            continue
+        for host, hg, band in titled:
+            inside = (hg[0] <= g[0] and g[0] + g[2] <= hg[0] + hg[2]
+                      and hg[1] <= g[1])
+            if inside and g[1] < hg[1] + band - TOL:
+                out.append((host, cid, g[1], hg[1] + band))
+    return out
+
+
+# Source-coordinate patterns. A diagram is read by people who do not have the
+# repository open: a file name, a function name or a line number is stale the
+# next time the code moves, and it pushes the reader out of the diagram and
+# into a search. They are a violation, not a style preference.
+CODE_DETAIL_PATTERNS = (
+    (re.compile(r"\b[\w-]+\.(go|py|java|kt|ts|js|rb|rs|sql|yaml|yml)\b"),
+     "source file name"),
+    (re.compile(r"\b\w+\(\)"), "function call"),
+    (re.compile(r"(?<![\w/.-])\w[\w.-]*/[\w.-]+/(internal|pkg|cmd|src)/"),
+     "package path"),
+)
+
+
+def _code_detail(value):
+    """The first source coordinate in a cell value, or None."""
+    for pat, what in CODE_DETAIL_PATTERNS:
+        m = pat.search(value)
+        if m:
+            return f"{what} {m.group(0)!r}"
+    return None
+
+
+def _cell_lines(value):
+    """Cell text split the way the renderer breaks it: <br> and newlines."""
+    out = []
+    for chunk in str(value or "").split("<br>"):
+        out.extend(chunk.split("\n"))
+    return out
+
+
+def _check_text_fit(cells, geo):
+    """Cells whose text cannot fit their own box.
+
+    A cell narrower than its text does not shrink the text, it draws it
+    through the neighbouring cell - the table's version of a label overlapping
+    a node, and the reason a wrapped route list needs its row to grow.
+    """
+    out = []
+    for cid, c in cells.items():
+        if c.get("vertex") != "1" or not cid:
+            continue
+        val = str(c.get("value") or "")
+        if not val.strip():
+            continue
+        st = _style_of(c)
+        if not (st.startswith("text;") or ";text;" in st or "background=#" in st):
+            continue
+        g = geo.get(cid)
+        if not g:
+            continue
+        fs = float(_style_val(st, "fontSize", 10) or 10)
+        lines = _cell_lines(val)
+        need_w = max(len(ln) for ln in lines) * CHAR_W * fs + 6
+        need_h = len(lines) * fs * 1.5 + 2
+        if need_w > g[2] + TOL:
+            out.append((cid, f"text needs {need_w:.0f}px, box is {g[2]:.0f}px "
+                             f"wide", max(lines, key=len)[:40]))
+        if need_h > g[3] + TOL:
+            out.append((cid, f"text needs {need_h:.0f}px, box is {g[3]:.0f}px "
+                             f"tall ({len(lines)} line(s))", lines[0][:40]))
+    return out
+
+
+def _is_palette(diagram):
+    """The Standard Colors and Icons page: a legend, not an architecture page.
+
+    It is a catalog of swatches and icon cells, so wire, orphan and fit rules
+    do not apply. Structure rules (frontmatter, page order) still do.
+    """
+    return "color" in (diagram.get("name") or "").lower() or \
+        "icon" in (diagram.get("name") or "").lower()
+
 
 def _abs_geometry(diagram):
     """id -> absolute (x, y, w, h) for every vertex, walking parent offsets."""
@@ -112,10 +231,6 @@ def _orient(a, b, c):
     v = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
     return 0 if abs(v) < 1e-9 else (1 if v > 0 else -1)
 
-
-def _on_seg(a, b, p):
-    return (min(a[0], b[0]) - TOL <= p[0] <= max(a[0], b[0]) + TOL
-            and min(a[1], b[1]) - TOL <= p[1] <= max(a[1], b[1]) + TOL)
 
 
 def _seg_intersect(p1, p2, p3, p4):
@@ -186,19 +301,43 @@ def _label_midpoint_box(pts, text, frac, off_y, fs):
     return (mx - lw / 2, my - lh / 2 + off_y, lw, lh)
 
 
-def verify(xml_file, max_crossings=0):
+def verify(xml_file, max_crossings=0, quiet=False, bus_depth=240,
+           require_connectivity=True):
+    """Check a diagram. `xml_file` is a path or any file-like object.
+
+    Returns (violations, warnings). `quiet` suppresses the report so the
+    generator can gate its own output in memory before writing it: an engine
+    that can emit a file its own gate rejects is how unreadable diagrams reach
+    a reviewer in the first place.
+
+    `require_connectivity` is set False only when checking a FILTERED view
+    (design-only or implementation-only), where a component with no wire is
+    deliberate - its edges belong to the other source. Connectivity is a
+    property of the whole model, so the generator checks it once against the
+    complete model and not against each subset.
+    """
     tree = ET.parse(xml_file)
     diagrams = tree.getroot().findall("diagram")
     p1 = next((d for d in diagrams if "HLA" in d.get("name", "")), diagrams[0])
     cells, geo = _abs_geometry(p1)
 
     edges = {cid: c for cid, c in cells.items() if c.get("edge") == "1"}
+    # Annotations are text, not components: a title, a legend line or a
+    # footnote cannot be wired, so flagging one as an orphan is a false
+    # positive that trains the reader to ignore the gate. The same exclusion
+    # keeps them out of the overlap and wire-through-node checks, where a text
+    # box is not an obstacle either.
+    def is_annotation(cid):
+        st = _style_of(cells[cid])
+        return st.startswith("text;") or ";text;" in st
+
     components = {
         cid: c for cid, c in cells.items()
         if c.get("vertex") == "1" and cid
         and not any(cid.startswith(p) for p in IGNORE_PREFIXES)
         and cid not in IGNORE_EXACT
         and not (geo[cid][2] >= 400 and geo[cid][3] >= 300)  # containers
+        and not is_annotation(cid)
         and c.get("parent") not in edges           # edge label cells
         and not _style_of(c).startswith("edgeLabel")
     }
@@ -224,13 +363,27 @@ def verify(xml_file, max_crossings=0):
 
     violations, warnings = [], []
 
-    # 1 -- connectivity
+    # 1 -- connectivity. Skipped for a FILTERED view (design-only or
+    # implementation-only), where an unwired component is deliberate: its edges
+    # belong to the other source. The generator proves connectivity once
+    # against the whole model instead of against each subset.
     srcs = {e.get("source") for e in edges.values()}
     dsts = {e.get("target") for e in edges.values()}
     for cid, c in components.items():
+        val = str(c.get("value") or "").lower()
+        if not require_connectivity:
+            break
         if cid not in srcs and cid not in dsts:
             violations.append(f"orphan node {cid} ({c.get('value')!r})")
-        val = str(c.get("value") or "").lower()
+        # A microservice that calls something but is never called is drawn
+        # unreachable: an adaptor, a consumer or a BFF with no inbound wire.
+        # That is a modelling gap, not a style choice - the reader cannot tell
+        # where the component is entered from. Client and external-platform
+        # kinds are entry points by nature and are exempt.
+        elif "prIcon=pod" in _style_of(c) and cid not in dsts:
+            violations.append(
+                f"microservice {cid} ({c.get('value')!r}) has no incoming "
+                f"wire; draw how it is reached or declare it an entry point")
         if "callback" in val and not (cid in srcs and cid in dsts):
             violations.append(f"callback receiver {cid} lacks in+out wiring")
 
@@ -290,6 +443,81 @@ def verify(xml_file, max_crossings=0):
                     f"wire crossing {a} x {b} "
                     f"({hits.count('cross')}x > budget {max_crossings})")
 
+    # titled containers: a panel's caption must not strike through its first
+    # child row. Reported defect, invisible to every per-element rule.
+    for host, child, cy, band_end in _title_band_check(cells, geo):
+        violations.append(
+            f"annotation {child} at y={cy:.0f} sits inside the title band of "
+            f"{host} (caption occupies up to y={band_end:.0f})")
+    # a cell must be able to show its own text, and must not carry source
+    # coordinates: both are reader-facing defects the eye catches and the
+    # geometry rules cannot
+    for cid, why, snippet in _check_text_fit(cells, geo):
+        violations.append(f"cell {cid}: {why} ({snippet!r})")
+    for cid, c in cells.items():
+        if c.get("vertex") != "1" or not cid:
+            continue
+        leak = _code_detail(str(c.get("value") or ""))
+        if leak:
+            violations.append(
+                f"cell {cid} carries a source coordinate ({leak}); a diagram "
+                f"names behaviour, not code")
+
+    # page-wide text rules: every page, not just the HLA page. A table cell
+    # that cannot show its text draws it through the neighbouring cell, and a
+    # cell carrying a file name, a line number or a function name is stale the
+    # next time the code moves - the diagram is read by people who do not have
+    # the repository open.
+    for diagram in diagrams:
+        if _is_palette(diagram):
+            continue
+        dcells, dgeo = _abs_geometry(diagram)
+        for cid, why, snippet in _check_text_fit(dcells, dgeo):
+            violations.append(f"cell {cid}: {why} ({snippet!r})")
+        for cid, c in dcells.items():
+            if c.get("vertex") != "1" or not cid:
+                continue
+            leak = _code_detail(str(c.get("value") or ""))
+            if leak:
+                violations.append(
+                    f"cell {cid} carries a source coordinate ({leak}); a "
+                    f"diagram names behaviour, not code")
+
+    # wire envelope: a wire must stay on the page and inside the drawing. The
+    # gate previously passed a diagram whose wires ran past the lanes and off
+    # the canvas, because every individual segment was legal - that is the
+    # "lines go to the bottom of the page" defect, which no per-segment rule
+    # can see. A bus below the lanes is legitimate (the standard's event-bus
+    # rule), so the allowance is a depth budget rather than zero.
+    lane_boxes = [geo[cid] for cid, c in cells.items()
+                  if c.get("vertex") == "1" and cid
+                  and geo[cid][2] >= 200 and geo[cid][3] >= 300]
+    page_w = page_h = None
+    gm = p1.find("mxGraphModel")
+    if gm is not None:
+        page_w = float(gm.get("pageWidth", 0) or 0)
+        page_h = float(gm.get("pageHeight", 0) or 0)
+    if lane_boxes:
+        lx0 = min(g[0] for g in lane_boxes)
+        lx1 = max(g[0] + g[2] for g in lane_boxes)
+        ly0 = min(g[1] for g in lane_boxes)
+        ly1 = max(g[1] + g[3] for g in lane_boxes)
+        for eid, pts in polylines.items():
+            ys = [p[1] for p in pts]
+            xs = [p[0] for p in pts]
+            if max(ys) > ly1 + bus_depth:
+                warnings.append(
+                    f"wire {eid} runs {max(ys) - ly1:.0f}px below the lanes "
+                    f"(bus depth budget {bus_depth}px; a tidy bus stays near)")
+            if min(ys) < ly0 - 120:
+                violations.append(
+                    f"wire {eid} runs {ly0 - min(ys):.0f}px above the lanes")
+            if page_w and page_h and (max(xs) > page_w or min(xs) < 0
+                                      or max(ys) > page_h or min(ys) < 0):
+                violations.append(
+                    f"wire {eid} runs off the page (page "
+                    f"{page_w:.0f}x{page_h:.0f})")
+
     # wire-through-node: no segment may pass over a component it is not
     # sourcing or targeting
     for eid, pts in polylines.items():
@@ -324,32 +552,36 @@ def verify(xml_file, max_crossings=0):
             if _rects_overlap(lab_box, g):
                 violations.append(f"label of {a} overlaps node {cid}")
 
-    # report
-    print(f"verify_layout: {xml_file}")
-    print(f"  components={len(components)} edges={len(edges)}")
-    for v in violations:
-        print(f"  FAIL {v}")
-    seen = set()
-    for w in warnings:
-        key = w.split(" rides ")[1][:40]
-        if key in seen:
-            continue
-        seen.add(key)
-        print(f"  WARN {w}")
-    if violations:
-        print(f"RESULT: FAIL ({len(violations)} violation(s), "
-              f"{len(warnings)} warning(s))")
-        return 1
-    print(f"RESULT: PASS (0 violations, {len(warnings)} warning(s))")
-    return 0
+    if not quiet:
+        print(f"verify_layout: {xml_file}")
+        print(f"  components={len(components)} edges={len(edges)}")
+        for v in violations:
+            print(f"  FAIL {v}")
+        seen = set()
+        for w in warnings:
+            key = w.split(" rides ")[1][:40]
+            if key in seen:
+                continue
+            seen.add(key)
+            print(f"  WARN {w}")
+        if violations:
+            print(f"RESULT: FAIL ({len(violations)} violation(s), "
+                  f"{len(warnings)} warning(s))")
+        else:
+            print(f"RESULT: PASS (0 violations, {len(warnings)} warning(s))")
+    return violations, warnings
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     budget = 0
+    bus = 240
     for a in sys.argv[1:]:
         if a.startswith("--max-crossings="):
             budget = int(a.split("=")[1])
+        if a.startswith("--bus-depth="):
+            bus = int(a.split("=")[1])
     if not args:
         raise SystemExit(__doc__)
-    raise SystemExit(verify(args[0], budget))
+    violations, _warnings = verify(args[0], budget, bus_depth=bus)
+    raise SystemExit(1 if violations else 0)
