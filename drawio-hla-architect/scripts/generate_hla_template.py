@@ -62,7 +62,7 @@ STYLES = {
     "ext_box": "rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#EF7D30;strokeWidth=1.5;fontStyle=1;fontSize=11;align=center;",
 
     # Standard Infrastructure & Middleware Icons (html=1 strictly required)
-    "icon_kong": "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://seeklogo.com/images/K/kong-logo-30290787E5-seeklogo.com.png;fontSize=10;fontStyle=1;align=center;",
+    "icon_kong": "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNTMgMTM3IiB3aWR0aD0iNjQiIGhlaWdodD0iNjQiPgogIDxwYXRoIGZpbGw9IiMwMDJBM0EiIGQ9Ik01MC41LDExMi45bC0zLjcsNC43LDguNCwxMy4yLS45LDYuMWgzNS42bDIuNS02LjEtMTQuMy0xNy45aC0yNy42WiIvPgogIDxwYXRoIGZpbGw9IiMwMDdBQzIiIGQ9Ik02OS45LDMyLjZsLTEyLjksMjIuNyw2Mi45LDc0LjgtMS44LDYuOWgyOC44bDUuMi0yNC4zTDg0LjksMzIuNWgtMTVaIi8+CiAgPHBhdGggZmlsbD0iIzEyNjRBMyIgZD0iTTc4LjUsMTUuNWwtNi4xLDExLjNoMTUuMmwyNi4xLDMxLjIsMTUuNS0xMi44di04LjFsLTUuNC03LjYsNC00LjJMOTYuNy42bC0xOC4yLDE0LjlaIi8+CiAgPHBhdGggZmlsbD0iIzAwM0I1QyIgZD0iTTMxLjcsNzguN2gtOC41TC44LDEwNy4zdjI5LjZoMjRsNC4yLTUuNSwxOC41LTI0LjFoMjYuOGw4LjMtMTIuNy0yOS4xLTM0LjctMjEuOSwxOC45WiIvPgo8L3N2Zz4=;fontSize=10;fontStyle=1;align=center;",
     "icon_kafka": "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://www.svgrepo.com/show/353951/kafka-icon.svg;fontSize=10;fontStyle=1;align=center;",
     "icon_redis": "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://dashboard.snapcraft.io/site_media/appmedia/2020/08/1529926.png;fontSize=10;fontStyle=1;align=center;strokeWidth=1;fillColor=none;",
     "icon_postgres": "shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgdmlld0JveD0iMCAwIDI1LjYgMjUuNiIgaGVpZ2h0PSI2NCI+PHN0eWxlPi5Ce3N0cm9rZS1saW5lY2FwOnJvdW5kfS5De3N0cm9rZS1saW5lam9pbjpyb3VuZH0uRHtzdHJva2UtbGluZWpvaW46bWl0ZXJ9LkV7c3Ryb2tlLXdpZHRoOi43MTZ9PC9zdHlsZT48ZyBzdHJva2U9IiNmZmYiIGZpbGw9Im5vbmUiPjxwYXRoIGNsYXNzPSJEIiBzdHJva2Utd2lkdGg9IjIuMTQ5IiBzdHJva2UtbGluZWNhcD0iYnV0dCIgc3Ryb2tlPSIjMDAwIiBmaWxsPSIjMDAwIiBkPSJNMTguOTgzIDE4LjYzNmMuMTYzLTEuMzU3LjExNC0xLjU1NSAxLjEyNC0xLjMzNmwuMjU3LjAyM2MuNzc3LjAzNSAxLjc5My0uMTI1IDIuNC0uNDAyIDEuMjg1LS41OTYgMi4wNDctMS41OTIuNzgtMS4zMy0yLjg5LjU5Ni0zLjEtLjM4My0zLjEtLjM4MyAzLjA1My00LjUzIDQuMzMtMTAuMjggMy4yMjctMTEuNjg3LTMuMDA0LTMuODQtOC4yMDUtMi4wMjQtOC4yOTItMS45NzVsLS4wMjguMDA1Yy0uNTctLjEyLTEuMi0uMTktMS45My0uMi0xLjMwOC0uMDItMi4zLjM0My0zLjA1NC45MTQgMCAwLTkuMjc3LTMuODIyLTguODQ2IDQuODA3LjA5MiAxLjgzNiAyLjYzIDEzLjkgNS42NiAxMC4yNUM4LjI5IDE1Ljk4NyA5LjM2IDE0Ljg2IDkuMzYgMTQuODZjLjUzLjM1MyAxLjE2Ny41MzMgMS44MzQuNDY4bC4wNTItLjA0NGEyLjAxIDIuMDEgMCAwIDAgLjAyMS41MThjLS43OC44NzItLjU1IDEuMDI1LTIuMTEgMS4zNDYtMS41NzguMzI1LS42NS45MDQtLjA0NiAxLjA1Ni43MzQuMTg0IDIuNDMyLjQ0NCAzLjU4LTEuMTYybC0uMDQ2LjE4M2MuMzA2LjI0NS4yODUgMS43Ni4zMyAyLjg0MnMuMTE2IDIuMDkzLjMzNyAyLjY4OC40OCAyLjEzIDIuNTMgMS43YzEuNzEzLS4zNjcgMy4wMjMtLjg5NiAzLjE0My01LjgxIi8+PHBhdGggc3Ryb2tlPSJub25lIiBmaWxsPSIjMzM2NzkxIiBkPSJNMjMuNTM1IDE1LjZjLTIuODkuNTk2LTMuMS0uMzgzLTMuMS0uMzgzIDMuMDUzLTQuNTMgNC4zMy0xMC4yOCAzLjIyOC0xMS42ODctMy4wMDQtMy44NC04LjIwNS0yLjAyMy04LjI5Mi0xLjk3NmwtLjAyOC4wMDVhMTAuMzEgMTAuMzEgMCAwIDAtMS45MjktLjIwMWMtMS4zMDgtLjAyLTIuMy4zNDMtMy4wNTQuOTE0IDAgMC05LjI3OC0zLjgyMi04Ljg0NiA0LjgwNy4wOTIgMS44MzYgMi42MyAxMy45IDUuNjYgMTAuMjVDOC4yOSAxNS45ODcgOS4zNiAxNC44NiA5LjM2IDE0Ljg2Yy41My4zNTMgMS4xNjcuNTMzIDEuODM0LjQ2OGwuMDUyLS4wNDRhMi4wMiAyLjAyIDAgMCAwIC4wMjEuNTE4Yy0uNzguODcyLS41NSAxLjAyNS0yLjExIDEuMzQ2LTEuNTc4LjMyNS0uNjUuOTA0LS4wNDYgMS4wNTYuNzM0LjE4NCAyLjQzMi40NDQgMy41OC0xLjE2MmwtLjA0Ni4xODNjLjMwNi4yNDUuNTIgMS41OTMuNDg0IDIuODE1cy0uMDYgMi4wNi4xOCAyLjcxNi40OCAyLjEzIDIuNTMgMS43YzEuNzEzLS4zNjcgMi42LTEuMzIgMi43MjUtMi45MDYuMDg4LTEuMTI4LjI4Ni0uOTYyLjMtMS45N2wuMTYtLjQ3OGMuMTgzLTEuNTMuMDMtMi4wMjMgMS4wODUtMS43OTNsLjI1Ny4wMjNjLjc3Ny4wMzUgMS43OTQtLjEyNSAyLjM5LS40MDIgMS4yODUtLjU5NiAyLjA0Ny0xLjU5Mi43OC0xLjMzeiIvPjxnIGNsYXNzPSJFIj48ZyBjbGFzcz0iQiI+PHBhdGggY2xhc3M9IkMiIGQ9Ik0xMi44MTQgMTYuNDY3Yy0uMDggMi44NDYuMDIgNS43MTIuMjk4IDYuNHMuODc1IDIuMDUgMi45MjYgMS42MTJjMS43MTMtLjM2NyAyLjMzNy0xLjA3OCAyLjYwNy0yLjY0N2wuNjMzLTUuMDE3TTEwLjM1NiAyLjJTMS4wNzItMS41OTYgMS41MDQgNy4wMzNjLjA5MiAxLjgzNiAyLjYzIDEzLjkgNS42NiAxMC4yNUM4LjI3IDE1Ljk1IDkuMjcgMTQuOTA3IDkuMjcgMTQuOTA3bTYuMS0xMy40Yy0uMzIuMSA1LjE2NC0yLjAwNSA4LjI4MiAxLjk3OCAxLjEgMS40MDctLjE3NSA3LjE1Ny0zLjIyOCAxMS42ODciLz48cGF0aCBzdHJva2UtbGluZWpvaW49ImJldmVsIiBkPSJNMjAuNDI1IDE1LjE3cy4yLjk4IDMuMS4zODJjMS4yNjctLjI2Mi41MDQuNzM0LS43OCAxLjMzLTEuMDU0LjQ5LTMuNDE4LjYxNS0zLjQ1Ny0uMDYtLjEtMS43NDUgMS4yNDQtMS4yMTUgMS4xNDctMS42NTItLjA4OC0uMzk0LS42OS0uNzgtMS4wODYtMS43NDQtLjM0Ny0uODQtNC43Ni03LjI5IDEuMjI0LTYuMzMzLjIyLS4wNDUtMS41Ni01LjctNy4xNi01Ljc4MlM3Ljk5IDguMTk2IDcuOTkgOC4xOTYiLz48L2c+PGcgY2xhc3M9IkMiPjxwYXRoIGQ9Ik0xMS4yNDcgMTUuNzY4Yy0uNzguODcyLS41NSAxLjAyNS0yLjExIDEuMzQ2LTEuNTc4LjMyNS0uNjUuOTA0LS4wNDYgMS4wNTYuNzM0LjE4NCAyLjQzMi40NDQgMy41OC0xLjE2My4zNS0uNDktLjAwMi0xLjI3LS40ODItMS40NjgtLjIzMi0uMDk2LS41NDItLjIxNi0uOTQuMjN6Ii8+PHBhdGggY2xhc3M9IkIiIGQ9Ik0xMS4xOTYgMTUuNzUzYy0uMDgtLjUxMy4xNjgtMS4xMjIuNDMzLTEuODM2LjM5OC0xLjA3IDEuMzE2LTIuMTQuNTgyLTUuNTM3LS41NDctMi41My00LjIyLS41MjctNC4yMi0uMTg0cy4xNjYgMS43NC0uMDYgMy4zNjVjLS4yOTcgMi4xMjIgMS4zNSAzLjkxNiAzLjI0NiAzLjczMyIvPjwvZz48L2c+PGcgY2xhc3M9IkQiIGZpbGw9IiNmZmYiPjxwYXRoIHN0cm9rZS13aWR0aD0iLjIzOSIgZD0iTTEwLjMyMiA4LjE0NWMtLjAxNy4xMTcuMjE1LjQzLjUxNi40NzJzLjU1OC0uMjAyLjU3NS0uMzItLjIxNS0uMjQ2LS41MTYtLjI4OC0uNTYuMDItLjU3NS4xMzZ6Ii8+PHBhdGggc3Ryb2tlLXdpZHRoPSIuMTE5IiBkPSJNMTkuNDg2IDcuOTA2Yy4wMTYuMTE3LS4yMTUuNDMtLjUxNi40NzJzLS41Ni0uMjAyLS41NzUtLjMyLjIxNS0uMjQ2LjUxNi0uMjg4LjU2LjAyLjU3NS4xMzZ6Ii8+PC9nPjxwYXRoIGNsYXNzPSJCIEMgRSIgZD0iTTIwLjU2MiA3LjA5NWMuMDUuOTItLjE5OCAxLjU0NS0uMjMgMi41MjQtLjA0NiAxLjQyMi42NzggMy4wNS0uNDEzIDQuNjgiLz48L2c+PC9zdmc+;fontSize=10;fontStyle=1;align=center;",
@@ -109,18 +109,42 @@ class HLADiagramBuilder:
         self.page_height = page_height
         self.cells = []
         self.cell_id_counter = 100
+        self.lanes = {}  # lane_id -> {"x": x, "y": y, "width": width, "height": height, "title": title}
 
     def next_id(self, prefix="c"):
         self.cell_id_counter += 1
         return f"{prefix}_{self.cell_id_counter}"
 
     def add_swimlane(self, lane_id, title, x, y, width, height, fill_color="#f8f9fa", stroke_color="#4a5568"):
+        self.lanes[lane_id] = {"x": x, "y": y, "width": width, "height": height, "title": title}
         style = f"rounded=0;whiteSpace=wrap;html=1;fillColor={fill_color};strokeColor={stroke_color};strokeWidth=1.2;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingTop=10;opacity=60;"
         cell = f'<mxCell id="{lane_id}" parent="1" style="{style}" value="{esc(title)}" vertex="1">\n'
         cell += f'  <mxGeometry x="{x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
         cell += '</mxCell>'
         self.cells.append(cell)
         return lane_id
+
+    def get_lane_center_x(self, lane_id, width=44):
+        """
+        Calculates exact horizontal center x-coordinate for a component of given width
+        within the specified swimlane.
+        """
+        if lane_id not in self.lanes:
+            raise KeyError(f"Swimlane '{lane_id}' not found. Available lanes: {list(self.lanes.keys())}")
+        lane = self.lanes[lane_id]
+        return round(lane["x"] + (lane["width"] - width) / 2)
+
+    def get_lane_col_x(self, lane_id, col=1, total_cols=2, width=44):
+        """
+        Calculates x-coordinate for multi-column layout within a swimlane.
+        e.g. col=1, total_cols=2 returns the center of column 1.
+        """
+        if lane_id not in self.lanes:
+            raise KeyError(f"Swimlane '{lane_id}' not found. Available lanes: {list(self.lanes.keys())}")
+        lane = self.lanes[lane_id]
+        col_width = lane["width"] / total_cols
+        col_start = lane["x"] + (col - 1) * col_width
+        return round(col_start + (col_width - width) / 2)
 
     def add_system_container(self, container_id, title, x=485, y=25, width=1305, height=920, fill_color="#f8fafc", stroke_color="#94a3b8"):
         """
@@ -164,42 +188,62 @@ class HLADiagramBuilder:
         self.add_swimlane("lane_adapt", adaptor_title, 1515, y, 260, height, fill_color="#e1d5e7", stroke_color="#9673a6")
         self.add_swimlane("lane_ext", external_title, 1820, y, 520, height, fill_color="#f5f5f5", stroke_color="#b0b0b0")
 
-    def add_pod(self, pod_id, name, lifecycle_type, x, y, width=44, height=44):
+    def _resolve_x(self, x, lane, width):
+        if lane:
+            return self.get_lane_center_x(lane, width=width)
+        if isinstance(x, str) and x in self.lanes:
+            return self.get_lane_center_x(x, width=width)
+        return x
+
+    def add_pod(self, pod_id, name, lifecycle_type, x=None, y=None, width=44, height=44, lane=None):
+        final_x = self._resolve_x(x, lane, width)
         style_key = f"pod_{lifecycle_type.lower()}"
         style = STYLES.get(style_key, STYLES["pod_new"])
         cell = f'<mxCell id="{pod_id}" parent="1" style="{style}" value="{esc(name)}" vertex="1">\n'
-        cell += f'  <mxGeometry x="{x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
+        cell += f'  <mxGeometry x="{final_x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
         cell += '</mxCell>'
         self.cells.append(cell)
         return pod_id
 
-    def add_icon(self, icon_id, label, icon_type, x, y, width=45, height=45):
+    def add_icon(self, icon_id, label, icon_type, x=None, y=None, width=45, height=45, lane=None):
+        final_x = self._resolve_x(x, lane, width)
         style_key = f"icon_{icon_type.lower()}"
         style = STYLES.get(style_key, STYLES["icon_kong"])
         cell = f'<mxCell id="{icon_id}" parent="1" style="{style}" value="{esc(label)}" vertex="1">\n'
-        cell += f'  <mxGeometry x="{x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
+        cell += f'  <mxGeometry x="{final_x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
         cell += '</mxCell>'
         self.cells.append(cell)
         return icon_id
 
-    def add_database(self, db_id, label, db_type, lifecycle, x, y, width=45, height=52):
+    def add_database(self, db_id, label, db_type, lifecycle, x=None, y=None, width=45, height=52, lane=None):
+        final_x = self._resolve_x(x, lane, width)
         if db_type.lower() == "postgres":
-            return self.add_icon(db_id, label, "postgres", x, y, width=44, height=44)
+            return self.add_icon(db_id, label, "postgres", x=final_x, y=y, width=44, height=44)
         elif db_type.lower() == "redis":
-            return self.add_icon(db_id, label, "redis", x, y, width=44, height=44)
+            return self.add_icon(db_id, label, "redis", x=final_x, y=y, width=44, height=44)
         else:
             style_key = f"db_{lifecycle.lower()}"
             style = STYLES.get(style_key, STYLES["db_new"])
             cell = f'<mxCell id="{db_id}" parent="1" style="{style}" value="{esc(label)}" vertex="1">\n'
-            cell += f'  <mxGeometry x="{x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
+            cell += f'  <mxGeometry x="{final_x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
             cell += '</mxCell>'
             self.cells.append(cell)
             return db_id
 
-    def add_note(self, note_id, text, note_type, x, y, width=160, height=50):
+    def add_ext_box(self, box_id, label, x=None, y=None, width=160, height=60, lane=None):
+        final_x = self._resolve_x(x, lane, width)
+        style = STYLES["ext_box"]
+        cell = f'<mxCell id="{box_id}" parent="1" style="{style}" value="{esc(label)}" vertex="1">\n'
+        cell += f'  <mxGeometry x="{final_x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
+        cell += '</mxCell>'
+        self.cells.append(cell)
+        return box_id
+
+    def add_note(self, note_id, text, note_type, x=None, y=None, width=160, height=50, lane=None):
+        final_x = self._resolve_x(x, lane, width)
         style = STYLES["note_tbc"] if note_type == "tbc" else STYLES["note_cache_schema"]
         cell = f'<mxCell id="{note_id}" parent="1" style="{style}" value="{esc(text)}" vertex="1">\n'
-        cell += f'  <mxGeometry x="{x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
+        cell += f'  <mxGeometry x="{final_x}" y="{y}" width="{width}" height="{height}" as="geometry" />\n'
         cell += '</mxCell>'
         self.cells.append(cell)
         return note_id

@@ -68,6 +68,23 @@ To prevent text obscuration, title collisions, and crowded components across any
 * **Component-to-Component Clearance ($\Delta x \ge 40\text{px}, \Delta y \ge 50\text{px}$):** Microservices, database cylinders, and note callouts must never overlap each other. Maintain at least 40px horizontal spacing and 50px vertical spacing between adjacent nodes.
 * **Edge Label Clearance:** Flow sequence labels on edges must have sufficient offset (`dy = -12` or `dy = 12`) and must not collide with pod borders or database cylinders.
 
+### 2.2. Horizontal Swimlane Centering Rule (Single vs Multi-Microservice)
+When a swimlane contains only one microservice (or component) on a given track/row, it **MUST be horizontally centered** within that swimlane:
+$$\text{center\_x} = \text{lane\_x} + \frac{\text{lane\_width} - \text{component\_width}}{2}$$
+
+For standard 7-swimlanes (widths: client=240, gw=180, bff=220, orch=260, core=485, adapt=260, ext=520):
+* **Client Lane** ($x=40, w=240$): Single component ($w=44$) $\rightarrow x = 40 + (240-44)/2 = \mathbf{138}$
+* **Gateway Lane** ($x=295, w=180$): Single component ($w=45$) $\rightarrow x = 295 + (180-45)/2 = \mathbf{363}$
+* **Channel BFF Lane** ($x=505, w=220$): Single component ($w=44$) $\rightarrow x = 505 + (220-44)/2 = \mathbf{593}$
+* **Orchestration Lane** ($x=740, w=260$): Single component ($w=44$) $\rightarrow x = 740 + (260-44)/2 = \mathbf{848}$
+* **Domain Core Lane** ($x=1015, w=485$): Single component ($w=44$) $\rightarrow x = 1015 + (485-44)/2 = \mathbf{1236}$
+* **Adaptor Lane** ($x=1515, w=260$): Single component ($w=44$) $\rightarrow x = 1515 + (260-44)/2 = \mathbf{1623}$
+* **External Lane** ($x=1820, w=520$): Single component ($w=44$) $\rightarrow x = 1820 + (520-44)/2 = \mathbf{2058}$ (or width 160 box: $x=2000$)
+
+> [!TIP]
+> **Automated Centering via Builder:**
+> In `HLADiagramBuilder`, simply pass `lane="lane_id"` (e.g. `builder.add_pod("node_bff", "bff-mobile-payment", "enhanced", lane="lane_bff", y=220)`), or use `builder.get_lane_center_x(lane_id, width)` and `builder.get_lane_col_x(lane_id, col, total_cols, width)` for multi-column tracks.
+
 ### 3. Zero Orphan Nodes & Strict Topological Edge Anchoring
 
 * Every microservice placed on an HLA diagram **MUST have complete incoming and outgoing connectivity**.
@@ -160,8 +177,8 @@ style="shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=defa
 <!-- Redis Cache Snapcraft Icon -->
 style="shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://dashboard.snapcraft.io/site_media/appmedia/2020/08/1529926.png;fontSize=10;fontStyle=1;align=center;strokeWidth=1;fillColor=none;"
 
-<!-- Kong API Gateway Icon -->
-style="shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://seeklogo.com/images/K/kong-logo-30290787E5-seeklogo.com.png;fontSize=10;fontStyle=1;align=center;"
+<!-- Kong API Gateway Icon (Embedded Vector SVG - 100% Offline & Reliable) -->
+style="shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNTMgMTM3IiB3aWR0aD0iNjQiIGhlaWdodD0iNjQiPgogIDxwYXRoIGZpbGw9IiMwMDJBM0EiIGQ9Ik01MC41LDExMi45bC0zLjcsNC43LDguNCwxMy4yLS45LDYuMWgzNS42bDIuNS02LjEtMTQuMy0xNy45aC0yNy42WiIvPgogIDxwYXRoIGZpbGw9IiMwMDdBQzIiIGQ9Ik02OS45LDMyLjZsLTEyLjksMjIuNyw2Mi45LDc0LjgtMS44LDYuOWgyOC44bDUuMi0yNC4zTDg0LjksMzIuNWgtMTVaIi8+CiAgPHBhdGggZmlsbD0iIzEyNjRBMyIgZD0iTTc4LjUsMTUuNWwtNi4xLDExLjNoMTUuMmwyNi4xLDMxLjIsMTUuNS0xMi44di04LjFsLTUuNC03LjYsNC00LjJMOTYuNy42bC0xOC4yLDE0LjlaIi8+CiAgPHBhdGggZmlsbD0iIzAwM0I1QyIgZD0iTTMxLjcsNzguN2gtOC41TC44LDEwNy4zdjI5LjZoMjRsNC4yLTUuNSwxOC41LTI0LjFoMjYuOGw4LjMtMTIuNy0yOS4xLTM0LjctMjEuOSwxOC45WiIvPgo8L3N2Zz4=;fontSize=10;fontStyle=1;align=center;"
 
 <!-- Kafka Event Broker Icon -->
 style="shape=image;html=1;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;whiteSpace=wrap;image=https://www.svgrepo.com/show/353951/kafka-icon.svg;fontSize=10;fontStyle=1;align=center;"

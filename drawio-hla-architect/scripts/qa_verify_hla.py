@@ -103,9 +103,11 @@ def run_qa_audit(file_path, strict=False):
 
         # Classify elements
         swimlanes = []
+        containers = []
         pods = {}
         databases = {}
         image_icons = {}
+        notes = {}
         edges = []
         labels_by_parent = {}
 
@@ -130,15 +132,20 @@ def run_qa_audit(file_path, strict=False):
                 h = float(geo.get("height", 0) or 0) if geo is not None else 0
 
                 if "swimlane" in style or (h >= 400 and w >= 100 and "pod" not in style and "cylinder" not in style):
-                    swimlanes.append(c)
+                    if cid.startswith("box_") or "container" in cid.lower() or w >= 800:
+                        containers.append(c)
+                    else:
+                        swimlanes.append(c)
                 elif "pod" in style:
                     pods[cid] = c
                 elif "cylinder" in style:
                     databases[cid] = c
                 elif "shape=image" in style or "imageAspect" in style:
                     image_icons[cid] = c
+                elif "note" in cid.lower() or "cache_schema" in style or "#fad7ac" in style:
+                    notes[cid] = c
 
-        print(f"  📊 Inventory: {len(swimlanes)} swimlanes, {len(pods)} microservices, {len(databases)} DB cylinders, {len(edges)} connections")
+        print(f"  📊 Inventory: {len(swimlanes)} swimlanes ({len(containers)} bounding container), {len(pods)} microservices, {len(databases)} DB cylinders, {len(edges)} connections")
 
         if len(pods) == 0:
             print("  ℹ️ Note: No Kubernetes pod shapes detected in this tab. Skipping microservice graph rules.")
@@ -248,6 +255,68 @@ def run_qa_audit(file_path, strict=False):
             print("  ✅ [Rule 2.1 - Geometry Overlap]: All swimlanes, headers, and components have verified non-overlapping clearance.")
             scores["passed"] += 1
 
+        # Rule 2.2: Swimlane Horizontal Centering Audit (Single-Component Tracks)
+        off_center_nodes = []
+        all_track_nodes = {**pods, **image_icons, **databases, **notes}
+        for s in swimlanes:
+            sgeo = s.find("mxGeometry")
+            if sgeo is None:
+                continue
+            sx = float(sgeo.get("x", 0) or 0)
+            sy = float(sgeo.get("y", 0) or 0)
+            sw = float(sgeo.get("width", 0) or 0)
+            sh = float(sgeo.get("height", 0) or 0)
+            stitle = clean_text(s.get("value", ""))
+            scenter_x = sx + sw / 2.0
+
+            # Find all nodes physically located inside this swimlane
+            lane_nodes = []
+            for nid, ncell in all_track_nodes.items():
+                ngeo = ncell.find("mxGeometry")
+                if ngeo is None:
+                    continue
+                nx = float(ngeo.get("x", 0) or 0)
+                ny = float(ngeo.get("y", 0) or 0)
+                nw = float(ngeo.get("width", 44) or 44)
+                nh = float(ngeo.get("height", 44) or 44)
+                if nx >= sx - 10 and (nx + nw) <= (sx + sw + 10):
+                    lane_nodes.append((nid, ncell, nx, ny, nw, nh))
+
+            # Group by vertical row/track (within 40px)
+            row_buckets = []
+            for node_data in lane_nodes:
+                placed = False
+                for bucket in row_buckets:
+                    if abs(bucket["y"] - node_data[3]) <= 40:
+                        bucket["nodes"].append(node_data)
+                        placed = True
+                        break
+                if not placed:
+                    row_buckets.append({"y": node_data[3], "nodes": [node_data]})
+
+            # If a row has only 1 component, check centering for microservices/icons
+            for bucket in row_buckets:
+                if len(bucket["nodes"]) == 1:
+                    nid, ncell, nx, ny, nw, nh = bucket["nodes"][0]
+                    # Only audit microservices, databases, and major icons (auxiliary notes are exempted)
+                    if nid in notes:
+                        continue
+                    node_center_x = nx + nw / 2.0
+                    expected_center_x = round(sx + (sw - nw) / 2.0)
+                    offset = abs(node_center_x - scenter_x)
+                    if offset > 20:  # More than 20px off center
+                        nval = clean_text(ncell.get("value", ""))
+                        off_center_nodes.append((nid, nval, stitle, int(nx), expected_center_x, int(offset)))
+
+        if off_center_nodes:
+            print(f"  ⚠️  [Rule 2.2 - Swimlane Centering]: Found {len(off_center_nodes)} single-node track(s) not centered in swimlane:")
+            for ocn in off_center_nodes[:5]:
+                print(f"     - [{ocn[0]}] '{ocn[1]}' in '{ocn[2]}' at x={ocn[3]} (Expected center: x={ocn[4]}, offset={ocn[5]}px)")
+            scores["warnings"] += 1
+        else:
+            print("  ✅ [Rule 2.2 - Swimlane Centering]: Single microservices and icons are horizontally centered within their swimlanes.")
+            scores["passed"] += 1
+
 
         # Rule 3: Zero-Orphan Microservices & Topological Anchoring
         sources = {e.get("source") for e in edges if e.get("source")}
@@ -347,6 +416,22 @@ def run_qa_audit(file_path, strict=False):
             scores["errors"] += len(leaking_icons)
         else:
             print(f"  ✅ [Rule 6 - HTML br Rendering]: Multiline image icons properly declare 'html=1;whiteSpace=wrap;'.")
+            scores["passed"] += 1
+
+        # Rule 6.1: External Image Asset Health (Check for Cloudflare-blocked URLs)
+        seeklogo_icons = []
+        for iid, icell in image_icons.items():
+            istyle = icell.get("style", "")
+            if "seeklogo.com" in istyle:
+                seeklogo_icons.append((iid, clean_text(icell.get("value", ""))))
+
+        if seeklogo_icons:
+            print(f"  ❌ [Rule 6.1 - Asset Health]: {len(seeklogo_icons)} icon(s) use seeklogo.com which is blocked by Cloudflare (HTTP 403 Forbidden):")
+            for sli in seeklogo_icons[:5]:
+                print(f"     - [{sli[0]}] '{sli[1]}' must be upgraded to embedded vector SVG data URI.")
+            scores["errors"] += len(seeklogo_icons)
+        else:
+            print(f"  ✅ [Rule 6.1 - Asset Health]: All icons use reliable, Cloudflare-safe assets or embedded vector SVG data URIs.")
             scores["passed"] += 1
 
         # Rule 7: Wire-Crossing Arc Jump Quality
